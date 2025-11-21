@@ -1,26 +1,46 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/storage_service.dart';
 
-class ThemeNotifier extends StateNotifier<bool> {
-  // true = dark, false = light
-  ThemeNotifier() : super(false);
+// 1. Create a state class to hold both theme settings
+class ThemeState {
+  final bool isDark;
+  final String font;
+
+  const ThemeState({this.isDark = false, this.font = 'Roboto'});
+
+  ThemeState copyWith({bool? isDark, String? font}) {
+    return ThemeState(isDark: isDark ?? this.isDark, font: font ?? this.font);
+  }
+}
+
+// 2. Update the Notifier to manage ThemeState instead of bool
+class ThemeNotifier extends StateNotifier<ThemeState> {
+  ThemeNotifier() : super(const ThemeState());
 
   void setDark(bool v) {
-    state = v;
+    state = state.copyWith(isDark: v);
+    _persist();
+  }
+
+  void setFont(String fontName) {
+    state = state.copyWith(font: fontName);
     _persist();
   }
 
   Future<void> loadFromStorage() async {
     final raw = await StorageService.readAll();
-    final theme = raw?['theme'] as String?;
-    if (theme != null) {
-      state = (theme == 'dark');
-    }
+    if (raw == null) return;
+
+    final themeStr = raw['theme'] as String?;
+    final fontStr = raw['font'] as String?;
+
+    state = ThemeState(isDark: themeStr == 'dark', font: fontStr ?? 'Roboto');
   }
 
   Future<void> _persist() async {
     final raw = await StorageService.readAll() ?? {};
-    raw['theme'] = state ? 'dark' : 'light';
+    raw['theme'] = state.isDark ? 'dark' : 'light';
+    raw['font'] = state.font;
     await StorageService.writeAll(raw);
   }
 }

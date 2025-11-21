@@ -13,6 +13,7 @@ final categoriesProvider =
       (ref) => CategoriesNotifier(),
     );
 
-final themeProvider = StateNotifierProvider<ThemeNotifier, bool>(
+// UPDATED: Now returns ThemeState instead of bool
+final themeProvider = StateNotifierProvider<ThemeNotifier, ThemeState>(
   (ref) => ThemeNotifier(),
 );
