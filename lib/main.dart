@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'services/notification_service.dart';
 import 'providers/providers.dart';
-import 'providers/theme_notifier.dart';
+
 import 'screens/root_screen.dart';
-import 'theme/app_theme.dart'; // Ensure this import exists for AppTheme
+import 'theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await NotificationService().init();
   runApp(const ProviderScope(child: MindSpiceApp()));
 }
 

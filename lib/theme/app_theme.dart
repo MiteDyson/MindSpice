@@ -1,41 +1,39 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/src/foundation/diagnostics.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
 
 class AppTheme {
   /// Helper to load a TextTheme dynamically by font name.
   static TextTheme _getTextTheme(String font, TextTheme base) {
-    // GoogleFonts.asMap() allows looking up the font function by string name.
-    // Each entry is a TextStyle generator (accepts `textStyle`), so apply it to
-    // every TextStyle in the base TextTheme to produce a themed TextTheme.
-    final fontGenerator = GoogleFonts.asMap()[font];
-
-    if (fontGenerator != null) {
-      TextStyle? applyStyle(TextStyle? style) =>
-          style == null ? null : fontGenerator(textStyle: style);
-
-      return base.copyWith(
-        displayLarge: applyStyle(base.displayLarge),
-        displayMedium: applyStyle(base.displayMedium),
-        displaySmall: applyStyle(base.displaySmall),
-        headlineLarge: applyStyle(base.headlineLarge),
-        headlineMedium: applyStyle(base.headlineMedium),
-        headlineSmall: applyStyle(base.headlineSmall),
-        titleLarge: applyStyle(base.titleLarge),
-        titleMedium: applyStyle(base.titleMedium),
-        titleSmall: applyStyle(base.titleSmall),
-        bodyLarge: applyStyle(base.bodyLarge),
-        bodyMedium: applyStyle(base.bodyMedium),
-        bodySmall: applyStyle(base.bodySmall),
-        labelLarge: applyStyle(base.labelLarge),
-        labelMedium: applyStyle(base.labelMedium),
-        labelSmall: applyStyle(base.labelSmall),
-      );
+    // Helper to apply the font to a single TextStyle
+    TextStyle? applyFont(TextStyle? style) {
+      if (style == null) return null;
+      try {
+        return GoogleFonts.getFont(font, textStyle: style);
+      } catch (_) {
+        // Fallback if font name is invalid
+        return GoogleFonts.roboto(textStyle: style);
+      }
     }
 
-    // Fallback if the font name is invalid
-    return GoogleFonts.robotoTextTheme(base);
+    // Apply the font to every style in the TextTheme
+    return base.copyWith(
+      displayLarge: applyFont(base.displayLarge),
+      displayMedium: applyFont(base.displayMedium),
+      displaySmall: applyFont(base.displaySmall),
+      headlineLarge: applyFont(base.headlineLarge),
+      headlineMedium: applyFont(base.headlineMedium),
+      headlineSmall: applyFont(base.headlineSmall),
+      titleLarge: applyFont(base.titleLarge),
+      titleMedium: applyFont(base.titleMedium),
+      titleSmall: applyFont(base.titleSmall),
+      bodyLarge: applyFont(base.bodyLarge),
+      bodyMedium: applyFont(base.bodyMedium),
+      bodySmall: applyFont(base.bodySmall),
+      labelLarge: applyFont(base.labelLarge),
+      labelMedium: applyFont(base.labelMedium),
+      labelSmall: applyFont(base.labelSmall),
+    );
   }
 
   static ThemeData light(String font) {
@@ -66,7 +64,6 @@ class AppTheme {
           fontWeight: FontWeight.bold,
           color: AppColors.lightText,
         ),
-        // GitHub apps often have a subtle border under the header
         shape: const Border(bottom: BorderSide(color: AppColors.lightBorder)),
       ),
       cardTheme: CardTheme(

@@ -1,11 +1,9 @@
-import 'dart:convert';
 import 'package:csv/csv.dart';
 import '../models/entry.dart';
 import '../models/category.dart';
 
 // Export entries + categories in a simple CSV format:
-// We'll produce two CSVs concatenated with a header marker (simple approach).
-// For a more robust solution, consider producing two files or a ZIP.
+// We'll produce two CSVs concatenated with a header marker.
 
 String exportToCsv(List<Entry> entries, List<CategoryModel> categories) {
   // Categories CSV
@@ -53,9 +51,11 @@ Map<String, dynamic> importFromCsv(String text) {
           .toList();
   List<CategoryModel> cats = [];
   List<Entry> entries = [];
+
   if (parts.isNotEmpty) {
     final catCsv = parts[0];
     final catRows = const CsvToListConverter().convert(catCsv);
+    // Skip header row (index 0), start from 1
     if (catRows.length > 1) {
       for (var i = 1; i < catRows.length; i++) {
         final r = catRows[i];
@@ -69,9 +69,11 @@ Map<String, dynamic> importFromCsv(String text) {
       }
     }
   }
+
   if (parts.length > 1) {
     final entryCsv = parts[1];
     final entryRows = const CsvToListConverter().convert(entryCsv);
+    // Skip header row
     if (entryRows.length > 1) {
       for (var i = 1; i < entryRows.length; i++) {
         final r = entryRows[i];

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:mindspice/services/notification_service.dart' as notif;
 import '../providers/providers.dart';
 import '../widgets/settings/category_manager.dart';
 import '../widgets/settings/data_manager.dart';
@@ -13,12 +14,36 @@ class SettingsScreen extends ConsumerWidget {
     'Roboto': 'Standard',
     'Open Sans': 'Clean',
     'Lato': 'Modern',
-    'Comic Neue': 'Comic (Fun)', // Good Comic Sans alternative
+    'Comic Neue': 'Comic (Fun)',
     'Lobster': 'Fancy',
     'Pacifico': 'Handwriting',
     'Oswald': 'Bold',
     'Space Mono': 'Coding',
+    // ADDED: The Clash of Clans style font
+    'Luckiest Guy': 'Clash Style',
   };
+
+  Future<void> _setReminder(BuildContext context) async {
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+    );
+
+    if (picked != null) {
+      await notif.NotificationService().scheduleDailyNotification(
+        id: 0,
+        title: "Time to reflect!",
+        body: "Don't forget to add your MindSpice entry for today.",
+        time: notif.TimeOfDay(picked.hour, picked.minute),
+      );
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Reminder set for ${picked.format(context)}")),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -39,12 +64,11 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
 
-          // Theme Toggle
           Card(
             elevation: 0,
             color: Theme.of(
               context,
-            ).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+            ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
             child: Column(
               children: [
                 SwitchListTile(
@@ -57,15 +81,12 @@ class SettingsScreen extends ConsumerWidget {
                 ),
                 const Divider(height: 1),
 
-                // Font Selector
                 ListTile(
                   leading: const Icon(Icons.text_fields),
                   title: const Text('App Font'),
                   subtitle: Text(
                     _fonts[themeState.font] ?? themeState.font,
-                    style: GoogleFonts.getFont(
-                      themeState.font,
-                    ), // Preview the font
+                    style: GoogleFonts.getFont(themeState.font),
                   ),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => _showFontPicker(context, ref, themeState.font),
@@ -84,6 +105,22 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 8),
+
+          Card(
+            elevation: 0,
+            color: Theme.of(
+              context,
+            ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+            child: ListTile(
+              leading: const Icon(Icons.notifications_active_outlined),
+              title: const Text('Daily Reminder'),
+              subtitle: const Text('Set a time to journal'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => _setReminder(context),
+            ),
+          ),
+
+          const SizedBox(height: 16),
           const CategoryManager(),
 
           const SizedBox(height: 24),
@@ -135,10 +172,9 @@ class SettingsScreen extends ConsumerWidget {
                             selected: isSelected,
                             selectedTileColor: Theme.of(
                               context,
-                            ).primaryColor.withOpacity(0.1),
+                            ).primaryColor.withValues(alpha: 0.1),
                             title: Text(
                               fontName,
-                              // Show the font name IN that font so user can preview it
                               style: GoogleFonts.getFont(
                                 fontName,
                                 fontSize: 16,
