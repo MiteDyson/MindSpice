@@ -1,7 +1,6 @@
 name: mindspice
 description: "A Flutter project."
 publish_to: "none"
-
 version: 1.0.0+1
 
 environment:
@@ -23,19 +22,13 @@ dev_dependencies:
   flutter_lints: ^5.0.0
   flutter_launcher_icons: ^0.13.1
 
-flutter_icons:
-  android: true
-  ios: true
-  image_path: "assets/icon/app_icon.png"
-
-# flutter_icons:
-#   android: true
-#   ios: true
-#   image_path_ios: "assets/icon/app_icon.png"
-#   image_path_android_foreground: "assets/icon/app_icon_foreground.png"
-#   image_path_android_background: "assets/icon/app_icon_background.png"
-
 flutter:
   uses-material-design: true
   assets:
     - assets/icon/
+
+# --- APP ICON CONFIGURATION ---
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/app_icon.png"

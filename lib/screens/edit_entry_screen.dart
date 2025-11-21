@@ -8,39 +8,39 @@ class EditEntryScreen extends ConsumerStatefulWidget {
   final String? entryId;
   final bool isCreateMode;
 
-  const EditEntryScreen({
-    Key? key,
-    required this.entryId,
-    this.isCreateMode = false,
-  }) : super(key: key);
-
-  const EditEntryScreen.create({Key? key})
+  const EditEntryScreen({super.key, required this.entryId})
+    : isCreateMode = false;
+  const EditEntryScreen.create({super.key})
     : entryId = null,
-      isCreateMode = true,
-      super(key: key);
+      isCreateMode = true;
 
   @override
   ConsumerState<EditEntryScreen> createState() => _EditEntryScreenState();
 }
 
 class _EditEntryScreenState extends ConsumerState<EditEntryScreen> {
-  final TextEditingController _title = TextEditingController();
-  final TextEditingController _desc = TextEditingController();
+  late TextEditingController _title;
+  late TextEditingController _desc;
   DateTime? _date;
   Entry? _entry;
   final Set<String> _selectedCategories = {};
-
-  String? _titleError;
-  String? _descError;
-  String? _dateError;
-  String? _catsError;
-
-  bool _loading = true;
+  bool _isLoaded = false;
+  bool _hasChanges = false; // Track changes manually
 
   @override
   void initState() {
     super.initState();
+    _title = TextEditingController();
+    _desc = TextEditingController();
+    // Listen to changes to enable "Discard" warning
+    _title.addListener(_markChanged);
+    _desc.addListener(_markChanged);
+
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadInitial());
+  }
+
+  void _markChanged() {
+    if (!_hasChanges) setState(() => _hasChanges = true);
   }
 
   Future<void> _loadInitial() async {
@@ -53,14 +53,13 @@ class _EditEntryScreenState extends ConsumerState<EditEntryScreen> {
         _desc.text = found.description;
         _date = found.date;
         _selectedCategories.addAll(found.categories);
-      } catch (_) {
-        // entry not found
-      }
+        // Reset change flag after loading data
+        setState(() => _hasChanges = false);
+      } catch (_) {}
     } else {
-      _entry = null;
+      _date = DateTime.now();
     }
-
-    setState(() => _loading = false);
+    setState(() => _isLoaded = true);
   }
 
   @override
@@ -70,420 +69,179 @@ class _EditEntryScreenState extends ConsumerState<EditEntryScreen> {
     super.dispose();
   }
 
-  bool get _isFormValid {
-    return (_title.text.trim().isNotEmpty) &&
-        (_desc.text.trim().isNotEmpty) &&
-        (_date != null) &&
-        _selectedCategories.isNotEmpty;
-  }
+  Future<void> _save() async {
+    if (_title.text.isEmpty && _desc.text.isEmpty) return; // Don't save empty
 
-  void _validateAll() {
-    setState(() {
-      _titleError = _title.text.trim().isEmpty ? 'Title is required' : null;
-      _descError = _desc.text.trim().isEmpty ? 'Description is required' : null;
-      _dateError = _date == null ? 'Date is required' : null;
-      _catsError =
-          _selectedCategories.isEmpty ? 'Select at least one category' : null;
-    });
-  }
-
-  Future<void> _pickDate() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _date ?? DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
-    );
-    if (picked != null) {
-      setState(() => _date = picked);
-      if (_dateError != null) _dateError = null;
-    }
-  }
-
-  Future<void> _confirmAndDelete(BuildContext context, String id) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder:
-          (ctx) => AlertDialog(
-            title: const Text('Delete Entry'),
-            content: const Text(
-              'Are you sure you want to delete this entry? This action cannot be undone.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(false),
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                onPressed: () => Navigator.of(ctx).pop(true),
-                child: const Text('Delete'),
-              ),
-            ],
-          ),
-    );
-
-    if (confirmed == true) {
-      ref.read(entriesProvider.notifier).delete(id);
-      // Ensure app returns to Home
-      if (mounted) Navigator.of(context).popUntil((r) => r.isFirst);
-    }
-  }
-
-  Future<void> _onSave() async {
-    _validateAll();
-    if (!_isFormValid) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please complete all required fields.')),
-      );
-      return;
-    }
-
-    final entriesNotifier = ref.read(entriesProvider.notifier);
+    final notifier = ref.read(entriesProvider.notifier);
 
     if (widget.isCreateMode) {
-      final newEntry = entriesNotifier.createForDate(_date ?? DateTime.now());
+      final newEntry = notifier.createForDate(_date ?? DateTime.now());
       newEntry
         ..title = _title.text.trim()
         ..description = _desc.text.trim()
         ..date = _date ?? DateTime.now()
-        ..categories = _selectedCategories.toList()
-        ..updatedAt = DateTime.now();
-
-      entriesNotifier.update(newEntry);
-
-      // go back to Home (pop everything until root)
-      if (mounted) Navigator.of(context).popUntil((r) => r.isFirst);
-    } else {
-      if (_entry == null) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Entry not found.')));
-        if (mounted) Navigator.of(context).popUntil((r) => r.isFirst);
-        return;
-      }
-      final e = _entry!;
-      e
+        ..categories = _selectedCategories.toList();
+      notifier.update(newEntry);
+    } else if (_entry != null) {
+      _entry!
         ..title = _title.text.trim()
         ..description = _desc.text.trim()
-        ..date = _date ?? e.date
-        ..categories = _selectedCategories.toList()
-        ..updatedAt = DateTime.now();
-
-      entriesNotifier.update(e);
-      if (mounted) Navigator.of(context).popUntil((r) => r.isFirst);
+        ..date = _date ?? _entry!.date
+        ..categories = _selectedCategories.toList();
+      notifier.update(_entry!);
     }
+
+    if (mounted) Navigator.of(context).pop();
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    if (!_isLoaded)
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+
     final categories = ref.watch(categoriesProvider);
 
-    if (_loading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-
-    if (!widget.isCreateMode && _entry == null) {
-      return Scaffold(
+    return PopScope(
+      canPop: !_hasChanges, // If no changes, allow pop. If changes, block it.
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final shouldPop = await showDialog<bool>(
+          context: context,
+          builder:
+              (ctx) => AlertDialog(
+                title: const Text('Discard changes?'),
+                content: const Text(
+                  'You have unsaved changes. Are you sure you want to leave?',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx, false),
+                    child: const Text('Keep Editing'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx, true),
+                    style: TextButton.styleFrom(foregroundColor: Colors.red),
+                    child: const Text('Discard'),
+                  ),
+                ],
+              ),
+        );
+        if (shouldPop == true && context.mounted) {
+          Navigator.pop(context);
+        }
+      },
+      child: Scaffold(
         appBar: AppBar(
-          title: const Text('Edit Entry'),
-          leading: IconButton(
-            icon: const Icon(Icons.close),
-            onPressed: () => Navigator.of(context).popUntil((r) => r.isFirst),
-          ),
-        ),
-        body: const Center(child: Text('Entry not found')),
-      );
-    }
-
-    final effectiveDate = _date;
-    final dateText =
-        effectiveDate == null
-            ? 'Pick a date'
-            : DateFormat('dd MMMM, yyyy').format(effectiveDate);
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.isCreateMode ? 'Create Entry' : 'Edit Entry'),
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.close),
-          tooltip: 'Cancel',
-          onPressed: () => Navigator.of(context).popUntil((r) => r.isFirst),
-        ),
-        actions: [
-          TextButton(
-            onPressed: _isFormValid ? _onSave : null,
-            child: Text(
-              'Save',
-              style: TextStyle(
-                color:
-                    _isFormValid
-                        ? theme.colorScheme.onPrimary
-                        : theme.disabledColor,
-              ),
-            ),
-          ),
-        ],
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Padding(
-                      padding: EdgeInsets.only(bottom: 6.0),
-                      child: Text(
-                        'Date',
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                    Card(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      elevation: 1,
-                      child: ListTile(
-                        title: Text(dateText),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.calendar_today_outlined),
-                          onPressed: _pickDate,
-                        ),
-                        onTap: _pickDate,
-                      ),
-                    ),
-                    if (_dateError != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 6, left: 6),
-                        child: Text(
-                          _dateError!,
-                          style: const TextStyle(color: Colors.red),
-                        ),
-                      ),
-                    const SizedBox(height: 12),
-                    const Padding(
-                      padding: EdgeInsets.only(bottom: 6.0),
-                      child: Text(
-                        'Categories',
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children:
-                          categories.map((c) {
-                            final selected = _selectedCategories.contains(
-                              c.name,
-                            );
-                            return FilterChip(
-                              label: Text(c.name),
-                              selected: selected,
-                              avatar: CircleAvatar(
-                                backgroundColor: Color(c.colorValue),
-                                radius: 12,
-                              ),
-                              selectedColor: theme.colorScheme.primary
-                                  .withOpacity(0.14),
-                              onSelected: (v) {
-                                setState(() {
-                                  if (v)
-                                    _selectedCategories.add(c.name);
-                                  else
-                                    _selectedCategories.remove(c.name);
-                                  if (_catsError != null &&
-                                      _selectedCategories.isNotEmpty)
-                                    _catsError = null;
-                                });
-                              },
-                            );
-                          }).toList(),
-                    ),
-                    if (_catsError != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 6, left: 6),
-                        child: Text(
-                          _catsError!,
-                          style: const TextStyle(color: Colors.red),
-                        ),
-                      ),
-                    const SizedBox(height: 16),
-                    const Padding(
-                      padding: EdgeInsets.only(bottom: 6.0),
-                      child: Text(
-                        'Title',
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                    TextField(
-                      controller: _title,
-                      decoration: InputDecoration(
-                        hintText: 'Enter title',
-                        errorText: _titleError,
-                        filled: true,
-                        fillColor: theme.colorScheme.surface,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide.none,
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(
-                            color: theme.colorScheme.primary.withOpacity(0.8),
-                          ),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 14,
-                        ),
-                      ),
-                      onChanged: (s) {
-                        if (_titleError != null && s.trim().isNotEmpty)
-                          setState(() => _titleError = null);
-                        setState(() {});
-                      },
-                      textInputAction: TextInputAction.next,
-                    ),
-                    const SizedBox(height: 14),
-                    const Padding(
-                      padding: EdgeInsets.only(bottom: 6.0),
-                      child: Text(
-                        'Description',
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(minHeight: 160),
-                      child: TextField(
-                        controller: _desc,
-                        decoration: InputDecoration(
-                          hintText: 'Write your note...',
-                          errorText: _descError,
-                          filled: true,
-                          fillColor: theme.colorScheme.surface,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide.none,
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(
-                              color: theme.colorScheme.primary.withOpacity(0.8),
-                            ),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 14,
-                          ),
-                        ),
-                        maxLines: null,
-                        keyboardType: TextInputType.multiline,
-                        onChanged: (s) {
-                          if (_descError != null && s.trim().isNotEmpty)
-                            setState(() => _descError = null);
-                          setState(() {});
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          '${_desc.text.trim().isEmpty ? 0 : _desc.text.trim().split(RegExp(r"\\s+")).where((w) => w.isNotEmpty).length} words',
-                          style: theme.textTheme.bodySmall,
-                        ),
-                        Text(
-                          'Updated: ${DateFormat.yMd().add_jm().format((_entry?.updatedAt ?? _entry?.date ?? DateTime.now()))}',
-                          style: theme.textTheme.bodySmall,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                  ],
-                ),
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 12.0,
-                vertical: 10.0,
-              ),
-              decoration: BoxDecoration(
-                color: theme.scaffoldBackgroundColor,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
-                    blurRadius: 6,
-                    offset: const Offset(0, -2),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  if (!widget.isCreateMode && _entry != null)
-                    TextButton.icon(
-                      onPressed: () => _confirmAndDelete(context, _entry!.id),
-                      icon: const Icon(Icons.delete_outline, color: Colors.red),
-                      label: const Text(
-                        'Delete',
-                        style: TextStyle(color: Colors.red),
-                      ),
-                    )
-                  else
-                    const SizedBox(width: 8),
-                  Row(
-                    children: [
-                      TextButton(
-                        onPressed:
-                            () => Navigator.of(
-                              context,
-                            ).popUntil((r) => r.isFirst),
-                        child: const Text('Cancel'),
-                      ),
-                      const SizedBox(width: 8),
-                      ElevatedButton(
-                        onPressed:
-                            _isFormValid
-                                ? _onSave
-                                : () {
-                                  _validateAll();
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        'Please complete all required fields.',
-                                      ),
-                                    ),
-                                  );
-                                },
-                        child: const Padding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 12.0,
-                            vertical: 12.0,
-                          ),
-                          child: Text('Save'),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+          title: Text(widget.isCreateMode ? 'New Entry' : 'Edit Entry'),
+          actions: [
+            TextButton(
+              onPressed: _save,
+              child: const Text(
+                'Save',
+                style: TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
           ],
+        ),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Date Picker
+              InkWell(
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: _date ?? DateTime.now(),
+                    firstDate: DateTime(2000),
+                    lastDate: DateTime(2100),
+                  );
+                  if (picked != null) {
+                    setState(() {
+                      _date = picked;
+                      _hasChanges = true;
+                    });
+                  }
+                },
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.calendar_today,
+                      size: 18,
+                      color: Colors.grey,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      _date == null
+                          ? 'Select Date'
+                          : DateFormat.yMMMEd().format(_date!),
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Title Input
+              TextField(
+                controller: _title,
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+                decoration: const InputDecoration(
+                  hintText: 'Title',
+                  border: InputBorder.none,
+                ),
+              ),
+
+              // Categories
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children:
+                      categories.map((c) {
+                        final isSelected = _selectedCategories.contains(c.name);
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8.0),
+                          child: FilterChip(
+                            label: Text(c.name),
+                            selected: isSelected,
+                            onSelected:
+                                (v) => setState(() {
+                                  _hasChanges = true;
+                                  v
+                                      ? _selectedCategories.add(c.name)
+                                      : _selectedCategories.remove(c.name);
+                                }),
+                            backgroundColor: Color(
+                              c.colorValue,
+                            ).withOpacity(0.1),
+                            selectedColor: Color(c.colorValue).withOpacity(0.3),
+                            checkmarkColor: Color(c.colorValue),
+                            side: BorderSide.none,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                ),
+              ),
+              const Divider(),
+
+              // Content Input
+              TextField(
+                controller: _desc,
+                maxLines: null,
+                decoration: const InputDecoration(
+                  hintText: 'Start writing...',
+                  border: InputBorder.none,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -5,11 +5,11 @@ import 'package:intl/intl.dart';
 import 'package:mindspice/models/category.dart';
 import '../providers/providers.dart';
 import '../models/entry.dart';
-import '../screens/edit_entry_screen.dart';
-import '../screens/create_screen.dart';
+import 'edit_entry_screen.dart';
+// REMOVED: import '../screens/create_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  const HomeScreen({super.key});
 
   @override
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
@@ -26,10 +26,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   void _clearSelection() => setState(() => _selectedIds.clear());
 
   void _toggleSelection(String id) => setState(() {
-    if (_selectedIds.contains(id))
+    if (_selectedIds.contains(id)) {
       _selectedIds.remove(id);
-    else
+    } else {
       _selectedIds.add(id);
+    }
   });
 
   String _relativeDateLabel(DateTime d) {
@@ -50,7 +51,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     if (toDelete.isEmpty) return;
     final ids = toDelete.map((e) => e.id).toList();
     final notifier = ref.read(entriesProvider.notifier);
-    for (final id in ids) notifier.delete(id);
+    for (final id in ids) {
+      notifier.delete(id);
+    }
     _clearSelection();
 
     ScaffoldMessenger.of(context).clearSnackBars();
@@ -62,7 +65,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         action: SnackBarAction(
           label: 'Undo',
           onPressed: () {
-            for (final e in toDelete) ref.read(entriesProvider.notifier).add(e);
+            for (final e in toDelete) {
+              ref.read(entriesProvider.notifier).add(e);
+            }
           },
         ),
       ),
@@ -79,8 +84,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     List<Entry> filtered =
         allEntries.where((e) {
           if (selectedCategory != 'ALL' &&
-              !e.categories.contains(selectedCategory))
+              !e.categories.contains(selectedCategory)) {
             return false;
+          }
           if (q.isEmpty) return true;
           return e.title.toLowerCase().contains(q) ||
               e.description.toLowerCase().contains(q) ||
@@ -118,10 +124,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
               onPressed: () {
                 setState(() {
-                  if (_selectedIds.length == filtered.length)
+                  if (_selectedIds.length == filtered.length) {
                     _selectedIds.clear();
-                  else
+                  } else {
                     _selectedIds.addAll(filtered.map((e) => e.id));
+                  }
                 });
               },
             ),
@@ -180,25 +187,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             onPressed: () => setState(() => isSearching = true),
           ),
         ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 8),
-            color: Colors.grey,
-            height: 1,
-          ),
-        ),
       );
     }
 
     return Scaffold(
       appBar: buildAppBar(),
+      // NOTE: FAB is now handled in RootScreen, but we keep it here
+      // if you ever use HomeScreen standalone.
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          // push CreateScreen, which will replace itself with the editor
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const CreateScreen()),
+            MaterialPageRoute(builder: (_) => const EditEntryScreen.create()),
           );
         },
         child: const Icon(Icons.add),
@@ -369,9 +369,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                             }).toList(),
                                       ),
                                       onTap: () {
-                                        if (selectionMode)
+                                        if (selectionMode) {
                                           _toggleSelection(e.id);
-                                        else {
+                                        } else {
                                           Navigator.push(
                                             context,
                                             MaterialPageRoute(

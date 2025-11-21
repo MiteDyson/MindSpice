@@ -1,33 +1,51 @@
 import 'package:flutter/material.dart';
 import 'home_screen.dart';
-import 'create_screen.dart';
 import 'settings_screen.dart';
+import 'edit_entry_screen.dart';
 
 class RootScreen extends StatefulWidget {
-  const RootScreen({Key? key}) : super(key: key);
+  const RootScreen({super.key});
   @override
   State<RootScreen> createState() => _RootScreenState();
 }
 
 class _RootScreenState extends State<RootScreen> {
   int _index = 0;
-  final _pages = const [HomeScreen(), CreateScreen(), SettingsScreen()];
+  final _pages = const [HomeScreen(), SettingsScreen()];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _pages[_index],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _index,
-        onTap: (i) => setState(() => _index = i),
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.add_circle_outline),
-            label: 'Create',
+      // IndexedStack preserves state (scroll position, text input) of tabs
+      body: IndexedStack(index: _index, children: _pages),
+
+      // FAB only appears on the Home/Journal tab
+      floatingActionButton:
+          _index == 0
+              ? FloatingActionButton(
+                onPressed:
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const EditEntryScreen.create(),
+                      ),
+                    ),
+                child: const Icon(Icons.add),
+              )
+              : null,
+
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _index,
+        onDestinationSelected: (i) => setState(() => _index = i),
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.book_outlined),
+            selectedIcon: Icon(Icons.book),
+            label: 'Journal',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
+          NavigationDestination(
+            icon: Icon(Icons.settings_outlined),
+            selectedIcon: Icon(Icons.settings),
             label: 'Settings',
           ),
         ],
