@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/storage_service.dart';
 
-// 1. Create a state class to hold both theme settings
 class ThemeState {
   final bool isDark;
   final String font;
@@ -13,7 +12,6 @@ class ThemeState {
   }
 }
 
-// 2. Update the Notifier to manage ThemeState instead of bool
 class ThemeNotifier extends StateNotifier<ThemeState> {
   ThemeNotifier() : super(const ThemeState());
 
@@ -29,18 +27,16 @@ class ThemeNotifier extends StateNotifier<ThemeState> {
 
   Future<void> loadFromStorage() async {
     final raw = await StorageService.readAll();
-    if (raw == null) return;
-
     final themeStr = raw['theme'] as String?;
     final fontStr = raw['font'] as String?;
 
     state = ThemeState(isDark: themeStr == 'dark', font: fontStr ?? 'Roboto');
   }
 
+  // FIXED: Uses the new safe save method
   Future<void> _persist() async {
-    final raw = await StorageService.readAll() ?? {};
-    raw['theme'] = state.isDark ? 'dark' : 'light';
-    raw['font'] = state.font;
-    await StorageService.writeAll(raw);
+    // We save these as separate keys or a map, sticking to your existing structure:
+    await StorageService.save('theme', state.isDark ? 'dark' : 'light');
+    await StorageService.save('font', state.font);
   }
 }

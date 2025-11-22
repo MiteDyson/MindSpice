@@ -17,7 +17,6 @@ class EntriesNotifier extends StateNotifier<EntriesState> {
     state = EntriesState(List.from(list));
   }
 
-  /// Permanently delete an entry by id and persist.
   void delete(String id) {
     state.entries.removeWhere((x) => x.id == id);
     _persist();
@@ -55,18 +54,14 @@ class EntriesNotifier extends StateNotifier<EntriesState> {
     return entry;
   }
 
+  // FIXED: Uses the new safe save method
   Future<void> _persist() async {
-    final raw = await StorageService.readAll() ?? {};
-    raw['entries'] = state.entries.map((e) => e.toJson()).toList();
-    await StorageService.writeAll(raw);
+    final data = state.entries.map((e) => e.toJson()).toList();
+    await StorageService.save('entries', data);
   }
 
   Future<void> loadFromStorage() async {
     final raw = await StorageService.readAll();
-    if (raw == null) {
-      state = EntriesState([]);
-      return;
-    }
     final list =
         (raw['entries'] as List<dynamic>?)
             ?.map((e) => Entry.fromJson(e as Map<String, dynamic>))
@@ -76,7 +71,6 @@ class EntriesNotifier extends StateNotifier<EntriesState> {
   }
 
   Future<void> importEntries(List<Entry> imported) async {
-    // naive merge by id
     final existIds = state.entries.map((e) => e.id).toSet();
     for (final e in imported) {
       if (!existIds.contains(e.id)) state.entries.add(e);

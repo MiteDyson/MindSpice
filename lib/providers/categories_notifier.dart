@@ -19,7 +19,6 @@ class CategoriesNotifier extends StateNotifier<List<CategoryModel>> {
     return c;
   }
 
-  // --- ADD THIS NEW METHOD ---
   void update(String id, String newName, int newColor) {
     state = [
       for (final c in state)
@@ -30,25 +29,20 @@ class CategoriesNotifier extends StateNotifier<List<CategoryModel>> {
     ];
     _persist();
   }
-  // ---------------------------
 
   void remove(String id) {
     state = state.where((c) => c.id != id).toList();
     _persist();
   }
 
+  // FIXED: Uses the new safe save method
   void _persist() async {
-    final raw = await StorageService.readAll() ?? {};
-    raw['categories'] = state.map((c) => c.toJson()).toList();
-    await StorageService.writeAll(raw);
+    final data = state.map((c) => c.toJson()).toList();
+    await StorageService.save('categories', data);
   }
 
   Future<void> loadFromStorage() async {
     final raw = await StorageService.readAll();
-    if (raw == null) {
-      state = [];
-      return;
-    }
     final data =
         (raw['categories'] as List<dynamic>?)
             ?.map((e) => CategoryModel.fromJson(e as Map<String, dynamic>))
