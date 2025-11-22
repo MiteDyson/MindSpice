@@ -19,6 +19,19 @@ class CategoriesNotifier extends StateNotifier<List<CategoryModel>> {
     return c;
   }
 
+  // --- ADD THIS NEW METHOD ---
+  void update(String id, String newName, int newColor) {
+    state = [
+      for (final c in state)
+        if (c.id == id)
+          CategoryModel(id: id, name: newName, colorValue: newColor)
+        else
+          c,
+    ];
+    _persist();
+  }
+  // ---------------------------
+
   void remove(String id) {
     state = state.where((c) => c.id != id).toList();
     _persist();

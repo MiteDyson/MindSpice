@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../providers/providers.dart';
@@ -40,7 +39,7 @@ class DataManager extends ConsumerWidget {
             action: SnackBarAction(
               label: 'Open',
               onPressed: () {
-                // Optional: Logic to open file could go here if using open_file package
+                // Optional: Logic to open file could go here
               },
             ),
           ),
@@ -55,24 +54,9 @@ class DataManager extends ConsumerWidget {
     }
   }
 
-  Future<void> _copyToClipboard(BuildContext context, WidgetRef ref) async {
-    final entries = ref.read(entriesProvider).entries;
-    final cats = ref.read(categoriesProvider);
-    final csv = exportToCsv(entries, cats);
-
-    await Clipboard.setData(ClipboardData(text: csv));
-    if (context.mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('CSV copied to clipboard!')));
-    }
-  }
-
   Future<void> _importAll(BuildContext context, WidgetRef ref) async {
     try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.any, // Allow any file type to avoid extension issues
-      );
+      final result = await FilePicker.platform.pickFiles(type: FileType.any);
       if (result == null) return;
 
       final file = File(result.files.single.path!);
@@ -122,14 +106,6 @@ class DataManager extends ConsumerWidget {
             subtitle: const Text('Save CSV to device storage'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => _saveToFile(context, ref),
-          ),
-          const Divider(height: 1),
-          ListTile(
-            leading: const Icon(Icons.copy),
-            title: const Text('Copy to Clipboard'),
-            subtitle: const Text('Copy CSV data'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => _copyToClipboard(context, ref),
           ),
           const Divider(height: 1),
           ListTile(

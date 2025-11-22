@@ -1,13 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/providers.dart';
+import '../../models/category.dart'; // Need this for the model type
 
 class CategoryManager extends ConsumerWidget {
   const CategoryManager({super.key});
 
-  void _showAddDialog(BuildContext context, WidgetRef ref) {
-    final controller = TextEditingController();
-    Color selectedColor = Colors.indigo;
+  // Unified dialog for both Creating and Editing
+  void _showDialog(
+    BuildContext context,
+    WidgetRef ref, {
+    CategoryModel? category,
+  }) {
+    final isEditing = category != null;
+    final controller = TextEditingController(
+      text: isEditing ? category.name : '',
+    );
+    // Default to Indigo for new, or existing color for edit
+    Color selectedColor =
+        isEditing ? Color(category.colorValue) : Colors.indigo;
 
     showDialog(
       context: context,
@@ -15,7 +26,7 @@ class CategoryManager extends ConsumerWidget {
           (ctx) => StatefulBuilder(
             builder:
                 (context, setDialogState) => AlertDialog(
-                  title: const Text('New Category'),
+                  title: Text(isEditing ? 'Edit Category' : 'New Category'),
                   content: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -39,6 +50,9 @@ class CategoryManager extends ConsumerWidget {
                               Colors.deepOrange,
                               Colors.purple,
                               Colors.pink,
+                              Colors.grey,
+                              Colors
+                                  .black, // Added Black/Grey for "Skipped" styles
                             ].map((c) {
                               return GestureDetector(
                                 onTap:
@@ -49,7 +63,7 @@ class CategoryManager extends ConsumerWidget {
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
                                     border:
-                                        selectedColor == c
+                                        selectedColor.value == c.value
                                             ? Border.all(
                                               color: Colors.grey,
                                               width: 2,
@@ -74,13 +88,25 @@ class CategoryManager extends ConsumerWidget {
                     ElevatedButton(
                       onPressed: () {
                         if (controller.text.isNotEmpty) {
-                          ref
-                              .read(categoriesProvider.notifier)
-                              .create(controller.text, selectedColor.value);
+                          if (isEditing) {
+                            // Update existing
+                            ref
+                                .read(categoriesProvider.notifier)
+                                .update(
+                                  category.id,
+                                  controller.text,
+                                  selectedColor.value,
+                                );
+                          } else {
+                            // Create new
+                            ref
+                                .read(categoriesProvider.notifier)
+                                .create(controller.text, selectedColor.value);
+                          }
                           Navigator.pop(ctx);
                         }
                       },
-                      child: const Text('Add'),
+                      child: Text(isEditing ? 'Save' : 'Add'),
                     ),
                   ],
                 ),
@@ -95,7 +121,7 @@ class CategoryManager extends ConsumerWidget {
       elevation: 0,
       color: Theme.of(
         context,
-      ).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+      ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -110,7 +136,8 @@ class CategoryManager extends ConsumerWidget {
                 ),
                 IconButton(
                   icon: const Icon(Icons.add_circle_outline),
-                  onPressed: () => _showAddDialog(context, ref),
+                  onPressed:
+                      () => _showDialog(context, ref), // Open Create Dialog
                   tooltip: "Add Category",
                 ),
               ],
@@ -135,12 +162,17 @@ class CategoryManager extends ConsumerWidget {
                             color: Color(c.colorValue),
                             fontWeight: FontWeight.w600,
                           ),
-                          backgroundColor: Color(c.colorValue).withOpacity(0.1),
+                          backgroundColor: Color(
+                            c.colorValue,
+                          ).withValues(alpha: 0.1),
                           deleteIconColor: Color(c.colorValue),
                           onDeleted:
                               () => ref
                                   .read(categoriesProvider.notifier)
                                   .remove(c.id),
+                          // ADDED: Tap to Edit
+                          onPressed:
+                              () => _showDialog(context, ref, category: c),
                         ),
                       )
                       .toList(),
