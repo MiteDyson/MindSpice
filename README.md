@@ -87,6 +87,7 @@ To update the icon, replace `assets/icon/app_icon.png` and run:
 
 ````bash
 dart run flutter_launcher_icons
+ ````
 
 ## 📂 Project Structure
 
