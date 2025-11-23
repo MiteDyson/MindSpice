@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'services/notification_service.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'providers/providers.dart';
-
+import 'providers/theme_notifier.dart';
 import 'screens/root_screen.dart';
 import 'theme/app_theme.dart';
+import 'services/notification_service.dart'; // Import the service
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Notifications
   await NotificationService().init();
+
   runApp(const ProviderScope(child: MindSpiceApp()));
 }
 
@@ -40,11 +44,8 @@ class _MindSpiceAppState extends ConsumerState<MindSpiceApp> {
     return MaterialApp(
       title: 'MindSpice',
       debugShowCheckedModeBanner: false,
-
-      // Use the modular AppTheme we created earlier
       theme: AppTheme.light(themeState.font),
       darkTheme: AppTheme.dark(themeState.font),
-
       themeMode: themeState.isDark ? ThemeMode.dark : ThemeMode.light,
       home: const RootScreen(),
     );

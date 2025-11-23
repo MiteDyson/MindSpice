@@ -19,7 +19,6 @@ class SettingsScreen extends ConsumerWidget {
     'Pacifico': 'Handwriting',
     'Oswald': 'Bold',
     'Space Mono': 'Coding',
-    // ADDED: The Clash of Clans style font
     'Luckiest Guy': 'Clash Style',
   };
 
@@ -34,7 +33,8 @@ class SettingsScreen extends ConsumerWidget {
         id: 0,
         title: "Time to reflect!",
         body: "Don't forget to add your MindSpice entry for today.",
-        time: notif.TimeOfDay(picked.hour, picked.minute),
+        // FIXED: Added 'hour:' and 'minute:' labels
+        time: notif.TimeOfDay(hour: picked.hour, minute: picked.minute),
       );
 
       if (context.mounted) {

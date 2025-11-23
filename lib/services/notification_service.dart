@@ -13,11 +13,12 @@ class NotificationService {
   Future<void> init() async {
     tz.initializeTimeZones();
 
-    // Android settings
+    // Android Settings
+    // 'ic_launcher' is the default app icon you generated
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
-    // iOS settings
+    // iOS Settings
     const DarwinInitializationSettings initializationSettingsDarwin =
         DarwinInitializationSettings(
           requestAlertPermission: true,
@@ -34,18 +35,34 @@ class NotificationService {
     await flutterLocalNotificationsPlugin.initialize(initializationSettings);
   }
 
-  // Schedule a daily reminder
+  // Schedule the daily notification
   Future<void> scheduleDailyNotification({
     required int id,
     required String title,
     required String body,
     required TimeOfDay time,
   }) async {
+    // Calculate the next occurrence of the chosen time
+    final tz.TZDateTime now = tz.TZDateTime.now(tz.local);
+    tz.TZDateTime scheduledDate = tz.TZDateTime(
+      tz.local,
+      now.year,
+      now.month,
+      now.day,
+      time.hour,
+      time.minute,
+    );
+
+    // If the time has already passed today, schedule for tomorrow
+    if (scheduledDate.isBefore(now)) {
+      scheduledDate = scheduledDate.add(const Duration(days: 1));
+    }
+
     await flutterLocalNotificationsPlugin.zonedSchedule(
       id,
       title,
       body,
-      _nextInstanceOfTime(time.hour, time.minute),
+      scheduledDate,
       const NotificationDetails(
         android: AndroidNotificationDetails(
           'daily_reminder_channel', // Channel ID
@@ -56,39 +73,20 @@ class NotificationService {
         ),
         iOS: DarwinNotificationDetails(),
       ),
+      // This mode ensures the notification still fires even in low-power modes
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
-      matchDateTimeComponents:
-          DateTimeComponents.time, // Repeat daily at this time
+      matchDateTimeComponents: DateTimeComponents.time, // Triggers repeats
     );
   }
 
-  // Helper to calculate the next notification time
-  tz.TZDateTime _nextInstanceOfTime(int hour, int minute) {
-    final tz.TZDateTime now = tz.TZDateTime.now(tz.local);
-    tz.TZDateTime scheduledDate = tz.TZDateTime(
-      tz.local,
-      now.year,
-      now.month,
-      now.day,
-      hour,
-      minute,
-    );
-    if (scheduledDate.isBefore(now)) {
-      scheduledDate = scheduledDate.add(const Duration(days: 1));
-    }
-    return scheduledDate;
-  }
-
-  Future<void> cancelAll() async {
-    await flutterLocalNotificationsPlugin.cancelAll();
-  }
+  // Custom TimeOfDay class helper if you want to avoid conflicting with Material
+  // But here we are using the one passed from UI, so we just use properties.
 }
 
-// Helper class for TimeOfDay if you don't want to import Material everywhere
 class TimeOfDay {
   final int hour;
   final int minute;
-  TimeOfDay(this.hour, this.minute);
+  TimeOfDay({required this.hour, required this.minute});
 }
