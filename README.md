@@ -8,7 +8,16 @@
   <i>Capture thoughts, organize with color, and reflect daily.</i>
 </p>
 
+
+____
+<div align="center">
+  
+### 📲 **[Download APK](https://drive.google.com/file/d/1-TvCHloeBa4u0BDJe1ypL1tCsdAU-EiL/view?usp=drive_link)**
+
+</div>
+
 ---
+
 
 ## 📖 Overview
 
